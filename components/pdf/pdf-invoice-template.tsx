@@ -1,17 +1,30 @@
 // components/pdf/pdf-invoice-template.tsx
-import { Document, Page, Text, View, StyleSheet, Image } from "@react-pdf/renderer";
+import React from "react";
+import {
+  Document,
+  Page,
+  Text,
+  View,
+  StyleSheet,
+  Image,
+} from "@react-pdf/renderer";
 
-export const InvoicePDF = ({ invoice, qrCodeUrl }: { invoice: any; qrCodeUrl: string }) => {
+type InvoicePDFProps = {
+  invoice: any;
+  qrCodeUrl: string;
+};
+
+export function InvoicePDF({ invoice, qrCodeUrl }: InvoicePDFProps) {
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        {/* Header with logo */}
+        {/* Header */}
         <View style={styles.header}>
           <Image src="/logo.png" style={styles.logo} />
           <Text style={styles.heading}>Invoice</Text>
         </View>
 
-        {/* Invoice Metadata */}
+        {/* Metadata */}
         <View style={styles.section}>
           <Text>Invoice ID: {invoice.id}</Text>
           <Text>Date: {new Date(invoice.created_at).toLocaleDateString()}</Text>
@@ -20,36 +33,40 @@ export const InvoicePDF = ({ invoice, qrCodeUrl }: { invoice: any; qrCodeUrl: st
 
         {/* Client Info */}
         <View style={styles.section}>
-          <Text>Client: {invoice.profiles.first_name} {invoice.profiles.last_name}</Text>
+          <Text>
+            Client: {invoice.profiles?.first_name} {invoice.profiles?.last_name}
+          </Text>
         </View>
 
         {/* Estimate Summary */}
         <View style={styles.section}>
-          <Text>Project Title: {invoice.estimates.title}</Text>
-          <Text>Description: {invoice.estimates.description}</Text>
+          <Text>Project Title: {invoice.estimates?.title}</Text>
+          <Text>Description: {invoice.estimates?.description}</Text>
         </View>
 
-        {/* Payment Summary */}
+        {/* Amount */}
         <View style={styles.section}>
           <Text style={styles.totalLabel}>Total Due:</Text>
-          <Text style={styles.totalAmount}>${(invoice.amount / 100).toFixed(2)}</Text>
+          <Text style={styles.totalAmount}>
+            ${(invoice.amount / 100).toFixed(2)}
+          </Text>
         </View>
 
         {/* QR Code */}
         <View style={styles.qrSection}>
           <Image src={qrCodeUrl} style={styles.qrImage} />
-          <Text style={styles.qrText}>Scan to pay</Text>
+          <Text style={styles.qrText}>Scan to Pay</Text>
         </View>
       </Page>
     </Document>
   );
-};
+}
 
 const styles = StyleSheet.create({
   page: {
     fontSize: 12,
     padding: 40,
-    backgroundColor: "#ffffff",
+    backgroundColor: "#fff",
     color: "#333",
   },
   header: {

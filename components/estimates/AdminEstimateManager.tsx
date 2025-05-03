@@ -4,12 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useSupabaseClient } from "@supabase/auth-helpers-react";
 import type { Database } from "@/types";
-import {
-  MoreVertical,
-  Trash,
-  Eye,
-  Send,
-} from "lucide-react";
+import { MoreVertical, Trash, Eye, Send } from "lucide-react";
 import LoadingSpinner from "@/components/shared/LoadingSpinner";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -59,21 +54,30 @@ export default function AdminEstimateManager() {
   };
 
   const sendEstimateToUser = async () => {
-    if (!selectedEstimate || !editedEstimate) return;
+    if (!selectedEstimate) return;
 
-    await supabase
+    // Never send `total` – it's auto-calculated
+    const { total, ...safeEstimate } = editedEstimate;
+
+    const finalEstimate = {
+      ...safeEstimate,
+      status: "pending_user",
+    };
+
+    const { error } = await supabase
       .from("estimates")
-      .update({
-        ...editedEstimate,
-        status: "pending_user",
-      })
+      .update(finalEstimate)
       .eq("id", selectedEstimate.id);
+
+    if (error) {
+      console.error("❌ Supabase update error:", error);
+      alert("Failed to finalize estimate. See console.");
+      return;
+    }
 
     setEstimates((prev) =>
       prev.map((e) =>
-        e.id === selectedEstimate.id
-          ? { ...e, ...editedEstimate, status: "pending_user" }
-          : e
+        e.id === selectedEstimate.id ? { ...e, ...finalEstimate } : e
       )
     );
 
@@ -126,56 +130,55 @@ export default function AdminEstimateManager() {
     );
   };
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center min-h-[200px]">
-        <LoadingSpinner />
-      </div>
-    );
-  }
-
   return (
     <section className="overflow-x-auto max-w-6xl mx-auto p-4">
-      <table className="min-w-full divide-y divide-zinc-200 dark:divide-zinc-700 bg-white dark:bg-zinc-900 shadow rounded-lg overflow-hidden">
-        <thead className="bg-zinc-100 dark:bg-zinc-800">
-          <tr>
-            <th className="text-left text-sm font-bold px-4 py-2">Title</th>
-            <th className="text-left text-sm font-bold px-4 py-2">Description</th>
-            <th className="text-left text-sm font-bold px-4 py-2">Budget</th>
-            <th className="text-left text-sm font-bold px-4 py-2">Timeline</th>
-            <th className="text-left text-sm font-bold px-4 py-2">Status</th>
-            <th className="text-sm font-bold px-4 py-2 text-right">Actions</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-zinc-100 dark:divide-zinc-700">
-          {estimates.map((est) => (
-            <tr key={est.id}>
-              <td className="px-4 py-2 text-sm">{est.title}</td>
-              <td className="px-4 py-2 text-sm truncate">{est.description}</td>
-              <td className="px-4 py-2 text-sm">${est.budget}</td>
-              <td className="px-4 py-2 text-sm">{est.timeline}</td>
-              <td className="px-4 py-2"><StatusBadge status={est.status} /></td>
-              <td className="px-4 py-2 text-right">
-                <button
-                  data-dropdown-button
-                  ref={(el) => (buttonRefs.current[est.id] = el)}
-                  onClick={(e) => {
-                    const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
-                    if (rect) setButtonPosition({ top: rect.top, left: rect.left });
-                    setDropdownOpen(dropdownOpen === est.id ? null : est.id);
-                  }}
-                  className="p-2 rounded hover:bg-zinc-200 dark:hover:bg-zinc-800"
-                >
-                  <MoreVertical className="w-4 h-4" />
-                </button>
-                {dropdownOpen === est.id && <DropdownPortal est={est} />}
-              </td>
+      {loading ? (
+        <div className="flex justify-center items-center min-h-[200px]">
+          <LoadingSpinner />
+        </div>
+      ) : estimates.length === 0 ? (
+        <p className="text-zinc-500">No estimates found.</p>
+      ) : (
+        <table className="min-w-full divide-y divide-zinc-200 dark:divide-zinc-700 bg-white dark:bg-zinc-900 shadow rounded-lg overflow-hidden">
+          <thead className="bg-zinc-100 dark:bg-zinc-800">
+            <tr>
+              <th className="text-left text-sm font-bold px-4 py-2">Title</th>
+              <th className="text-left text-sm font-bold px-4 py-2">Description</th>
+              <th className="text-left text-sm font-bold px-4 py-2">Total ($)</th>
+              <th className="text-left text-sm font-bold px-4 py-2">Timeline</th>
+              <th className="text-left text-sm font-bold px-4 py-2">Status</th>
+              <th className="text-sm font-bold px-4 py-2 text-right">Actions</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody className="divide-y divide-zinc-100 dark:divide-zinc-700">
+            {estimates.map((est) => (
+              <tr key={est.id}>
+                <td className="px-4 py-2 text-sm">{est.title}</td>
+                <td className="px-4 py-2 text-sm truncate">{est.description}</td>
+                <td className="px-4 py-2 text-sm">${Number(est.total).toFixed(2)}</td>
+                <td className="px-4 py-2 text-sm">{est.timeline}</td>
+                <td className="px-4 py-2"><StatusBadge status={est.status} /></td>
+                <td className="px-4 py-2 text-right">
+                  <button
+                    data-dropdown-button
+                    ref={(el) => (buttonRefs.current[est.id] = el)}
+                    onClick={(e) => {
+                      const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
+                      if (rect) setButtonPosition({ top: rect.top, left: rect.left });
+                      setDropdownOpen(dropdownOpen === est.id ? null : est.id);
+                    }}
+                    className="p-2 rounded hover:bg-zinc-200 dark:hover:bg-zinc-800"
+                  >
+                    <MoreVertical className="w-4 h-4" />
+                  </button>
+                  {dropdownOpen === est.id && <DropdownPortal est={est} />}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
 
-      {/* Admin Edit Modal */}
       <AnimatePresence>
         {selectedEstimate && (
           <motion.div
@@ -210,7 +213,7 @@ export default function AdminEstimateManager() {
                   onChange={(e) =>
                     setEditedEstimate((prev) => ({ ...prev, budget: Number(e.target.value) }))
                   }
-                  placeholder="Budget ($)"
+                  placeholder="Budget (in cents)"
                   type="number"
                 />
                 <input

@@ -1,0 +1,14 @@
+{
+    "checkout.session.completed": {
+      "data": {
+        "object": {
+          "id": "cs_test_12345",
+          "object": "checkout.session",
+          "metadata": {
+            "invoice_id": "08c175d1-d85c-4a97-9953-9a8e08f2a399"
+          }
+        }
+      }
+    }
+  }
+  

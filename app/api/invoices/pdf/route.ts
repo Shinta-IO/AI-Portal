@@ -1,8 +1,7 @@
-// app/api/invoices/pdf/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import PDFDocument from "pdfkit";
-import getStream from "get-stream";
+import { renderToBuffer } from "@react-pdf/renderer";
+import { InvoicePDF } from "@/components/pdf/pdf-invoice-template"; // ✅ Make sure this is a .tsx React component
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -19,7 +18,7 @@ export async function GET(req: NextRequest) {
 
   const { data: invoice, error } = await supabase
     .from("invoices")
-    .select("*, estimates(title)")
+    .select("*, profiles(first_name, last_name), estimates(title, description)")
     .eq("id", invoiceId)
     .single();
 
@@ -27,20 +26,14 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
   }
 
-  const doc = new PDFDocument();
-  const stream = doc.pipe(getStream.buffer());
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://yourdomain.com/pay/${invoice.id}`;
 
-  doc.fontSize(18).text(`Invoice #${invoice.id}`, { align: "center" });
-  doc.moveDown();
-  doc.fontSize(14).text(`Project: ${invoice.estimates?.title || "Untitled"}`);
-  doc.text(`Amount: $${(invoice.amount / 100).toFixed(2)}`);
-  doc.text(`Status: ${invoice.status}`);
-  doc.text(`Created: ${new Date(invoice.created_at).toLocaleString()}`);
+  // ✅ This part is fixed: render JSX inside renderToBuffer
+  const pdfBuffer = await renderToBuffer(
+    InvoicePDF({ invoice, qrCodeUrl }) // NOT JSX — call the function
+  );
 
-  doc.end();
-  const buffer = await stream;
-
-  return new NextResponse(buffer, {
+  return new NextResponse(pdfBuffer, {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": `inline; filename=invoice-${invoice.id}.pdf`,
