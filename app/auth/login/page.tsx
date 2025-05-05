@@ -1,10 +1,8 @@
-// app/auth/login/page.tsx
-
 "use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabaseClient as supabase } from "@/utils/supabaseClient";
+import { supabaseClient as supabase } from "@/lib/supabase/client";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import LoadingSpinner from "@/components/shared/LoadingSpinner";
@@ -58,7 +56,6 @@ export default function LoginPage() {
 
   return (
     <main className="relative min-h-screen flex items-center justify-center bg-brand-light dark:bg-brand-dark overflow-hidden transition-colors">
-      {/* Animated Background Glow */}
       <motion.div
         className="absolute inset-0 bg-gradient-to-br from-brand-primary via-brand-accent to-brand-blue opacity-20 sm:opacity-30 blur-3xl"
         animate={{ rotate: 360 }}
@@ -72,11 +69,7 @@ export default function LoginPage() {
         transition={{ duration: 0.8 }}
       >
         <div className="flex flex-col items-center mb-4">
-          <img
-            src="/logo.png"
-            alt="Pixel Pro Logo"
-            className="w-16 h-16 mb-2"
-          />
+          <img src="/logo.png" alt="Pixel Pro Logo" className="w-16 h-16 mb-2" />
           <h1 className="text-3xl font-heading font-bold text-center bg-gradient-to-r from-brand-accent via-brand-primary to-brand-yellow text-transparent bg-clip-text">
             Pixel Pro Portal
           </h1>

@@ -2,7 +2,7 @@
 import "./globals.css";
 import type { Metadata } from "next";
 import { ThemeProvider } from "next-themes";
-import ClientWrapper from "@/components/shared/ClientWrapper";
+import { SupabaseProvider } from "@/lib/supabase/SupabaseContext";
 import FloatingEnzo from "@/components/ai/FloatingEnzo";
 
 export const metadata: Metadata = {
@@ -18,16 +18,11 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="bg-brand-light dark:bg-brand-dark text-black dark:text-white transition-colors">
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <ClientWrapper>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <SupabaseProvider>
             {children}
             <FloatingEnzo />
-          </ClientWrapper>
+          </SupabaseProvider>
         </ThemeProvider>
       </body>
     </html>

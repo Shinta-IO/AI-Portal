@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useSupabaseClient } from "@supabase/auth-helpers-react";
+import { useSupabase } from "@/lib/supabase/SupabaseContext";
 import type { Database } from "@/types";
 import { MoreVertical, Trash, Eye, Send } from "lucide-react";
 import LoadingSpinner from "@/components/shared/LoadingSpinner";
@@ -11,7 +11,7 @@ import { motion, AnimatePresence } from "framer-motion";
 type Estimate = Database["public"]["Tables"]["estimates"]["Row"];
 
 export default function AdminEstimateManager() {
-  const supabase = useSupabaseClient<Database>();
+  const { supabase } = useSupabase();
   const [estimates, setEstimates] = useState<Estimate[]>([]);
   const [selectedEstimate, setSelectedEstimate] = useState<Estimate | null>(null);
   const [editedEstimate, setEditedEstimate] = useState<Partial<Estimate>>({});
@@ -56,7 +56,6 @@ export default function AdminEstimateManager() {
   const sendEstimateToUser = async () => {
     if (!selectedEstimate) return;
 
-    // Never send `total` – it's auto-calculated
     const { total, ...safeEstimate } = editedEstimate;
 
     const finalEstimate = {
@@ -76,9 +75,7 @@ export default function AdminEstimateManager() {
     }
 
     setEstimates((prev) =>
-      prev.map((e) =>
-        e.id === selectedEstimate.id ? { ...e, ...finalEstimate } : e
-      )
+      prev.map((e) => (e.id === selectedEstimate.id ? { ...e, ...finalEstimate } : e))
     );
 
     setSelectedEstimate(null);

@@ -1,41 +1,43 @@
-// components/projects/ProgressTracker.tsx
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSupabaseClient } from "@supabase/auth-helpers-react";
+import { useSupabase } from "@/lib/supabase/SupabaseContext";
 import type { Database } from "@/types";
 import { motion } from "framer-motion";
-import { CheckCircle, XCircle, Circle } from "lucide-react";
 
 interface ProgressTrackerProps {
   projectId: string;
   isAdmin?: boolean;
+  refreshTrigger?: number;
 }
 
-const ProgressTracker = ({ projectId, isAdmin }: ProgressTrackerProps) => {
-  const supabase = useSupabaseClient<Database>();
-  const [tasks, setTasks] = useState<Database["public"]["Tables"]["project_tasks"]["Row"][]>([]);
+type Task =
+  | Database["public"]["Tables"]["project_tasks"]["Row"]
+  | Database["public"]["Views"]["user_visible_tasks"]["Row"];
+
+const ProgressTracker = ({ projectId, isAdmin = false, refreshTrigger }: ProgressTrackerProps) => {
+  const { supabase } = useSupabase();
+  const [tasks, setTasks] = useState<Task[]>([]);
+
+  const fetchTasks = async () => {
+    const table = isAdmin ? "project_tasks" : "user_visible_tasks";
+
+    const { data, error } = await supabase
+      .from(table)
+      .select("*")
+      .eq("project_id", projectId);
+
+    if (error) {
+      console.error(`❌ Failed to fetch tasks from ${table}:`, error);
+    } else {
+      console.log(`✅ Tasks fetched from ${table}:`, data);
+      setTasks(data || []);
+    }
+  };
 
   useEffect(() => {
-    const fetchTasks = async () => {
-      const { data } = await supabase
-        .from("project_tasks")
-        .select("*")
-        .eq("project_id", projectId)
-        .order("order_index", { ascending: true });
-
-      if (data) setTasks(data);
-    };
-
     fetchTasks();
-  }, [projectId, supabase]);
-
-  const updateTaskStatus = async (taskId: string, newStatus: "incomplete" | "complete" | "cancelled") => {
-    await supabase.from("project_tasks").update({ status: newStatus }).eq("id", taskId);
-    setTasks((prev) =>
-      prev.map((task) => (task.id === taskId ? { ...task, status: newStatus } : task))
-    );
-  };
+  }, [projectId, refreshTrigger]);
 
   const completionRate =
     tasks.length > 0
@@ -48,50 +50,24 @@ const ProgressTracker = ({ projectId, isAdmin }: ProgressTrackerProps) => {
     <div className="mt-6 bg-white dark:bg-zinc-900 p-6 rounded-lg shadow border border-zinc-200 dark:border-zinc-700">
       <h2 className="text-lg font-semibold mb-4">Project Progress</h2>
 
-      <div className="mb-4 h-4 w-full bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden">
-        <motion.div
-          className="h-full bg-brand"
-          initial={{ width: 0 }}
-          animate={{ width: `${completionRate}%` }}
-          transition={{ duration: 0.5 }}
-        />
-      </div>
-      <p className="text-sm text-zinc-600 dark:text-zinc-300 mb-4">{completionRate}% complete</p>
+      {tasks.length === 0 ? (
+        <p className="text-sm text-zinc-400">No tasks available for this project.</p>
+      ) : (
+        <>
+          <div className="mb-4 h-4 min-w-[200px] w-full bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden relative">
+            <motion.div
+              className="h-full bg-blue-300"
+              initial={{ width: 0 }}
+              animate={{ width: `${completionRate}%` }}
+              transition={{ duration: 0.5 }}
+            />
+          </div>
 
-      <ul className="space-y-3">
-        {tasks.map((task) => (
-          <li key={task.id} className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              {task.status === "complete" ? (
-                <CheckCircle className="text-green-500 w-5 h-5" />
-              ) : task.status === "cancelled" ? (
-                <XCircle className="text-red-500 w-5 h-5" />
-              ) : (
-                <Circle className="text-zinc-400 w-5 h-5" />
-              )}
-              <span className="text-sm text-zinc-800 dark:text-zinc-100">
-                {task.title}
-              </span>
-            </div>
-            {isAdmin && (
-              <div className="flex gap-2">
-                <button
-                  className="text-xs bg-green-500 text-white px-2 py-1 rounded"
-                  onClick={() => updateTaskStatus(task.id, "complete")}
-                >
-                  Mark Complete
-                </button>
-                <button
-                  className="text-xs bg-red-500 text-white px-2 py-1 rounded"
-                  onClick={() => updateTaskStatus(task.id, "cancelled")}
-                >
-                  Cancel
-                </button>
-              </div>
-            )}
-          </li>
-        ))}
-      </ul>
+          <p className="text-sm text-zinc-600 dark:text-zinc-300 mb-2">
+            {tasks.filter((task) => task.status === "complete").length} of {tasks.length} tasks complete
+          </p>
+        </>
+      )}
     </div>
   );
 };

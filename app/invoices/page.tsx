@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSupabaseClient, useUser } from "@supabase/auth-helpers-react";
-import type { Database } from "@/types";
+import { useSupabase } from "@/lib/supabase/SupabaseContext";
+import { type Database } from "@/types";
 import {
   BadgeCheck,
   Clock,
@@ -19,8 +19,8 @@ type Invoice = Database["public"]["Tables"]["invoices"]["Row"] & {
 };
 
 export default function InvoicesPage() {
-  const supabase = useSupabaseClient<Database>();
-  const user = useUser();
+  const { supabase, session } = useSupabase();
+  const user = session?.user;
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState<string | null>(null);

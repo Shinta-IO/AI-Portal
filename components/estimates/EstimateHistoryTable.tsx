@@ -1,35 +1,34 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSupabaseClient, useUser } from "@supabase/auth-helpers-react";
+import { useSupabase } from "@/lib/supabase/SupabaseContext";
 import type { Database } from "@/types";
 import { MoreVertical } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function EstimateHistoryTable() {
-  const supabase = useSupabaseClient<Database>();
-  const user = useUser();
+  const { supabase, session } = useSupabase();
   const [estimates, setEstimates] = useState<any[]>([]);
   const [selected, setSelected] = useState<any | null>(null);
   const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     const fetchEstimates = async () => {
-      if (!user?.id) return;
+      if (!session?.user?.id) return;
       const { data } = await supabase
         .from("estimates")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", session.user.id)
         .order("created_at", { ascending: false });
       if (data) setEstimates(data);
     };
     fetchEstimates();
-  }, [supabase, user?.id]);
+  }, [supabase, session?.user?.id]);
 
   const approveEstimate = async (estimate: any) => {
     await supabase.from("estimates").update({ status: "approved" }).eq("id", estimate.id);
     await supabase.from("invoices").insert({
-      user_id: user?.id,
+      user_id: session?.user?.id,
       estimate_id: estimate.id,
       amount: estimate.budget,
       status: "unpaid",
@@ -58,7 +57,7 @@ export default function EstimateHistoryTable() {
     }
   };
 
-  if (!user) return null;
+  if (!session?.user) return null;
 
   return (
     <section className="mt-8 space-y-4 relative">

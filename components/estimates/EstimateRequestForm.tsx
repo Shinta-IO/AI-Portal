@@ -1,17 +1,14 @@
-// components/estimates/EstimateRequestForm.tsx
-
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useSupabaseClient, useUser } from "@supabase/auth-helpers-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MoreVertical, PlusCircle, Eye, CheckCircle2, XCircle } from "lucide-react";
 import { createPortal } from "react-dom";
 import type { Database } from "@/types";
+import { useSupabase } from "@/lib/supabase/SupabaseContext";
 
 export default function EstimateRequestForm() {
-  const supabase = useSupabaseClient<Database>();
-  const user = useUser();
+  const { supabase, session } = useSupabase();
 
   const [estimates, setEstimates] = useState<any[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -29,17 +26,17 @@ export default function EstimateRequestForm() {
 
   useEffect(() => {
     const fetchEstimates = async () => {
-      if (user) {
+      if (session?.user) {
         const { data } = await supabase
           .from("estimates")
           .select("*")
-          .eq("user_id", user.id)
+          .eq("user_id", session.user.id)
           .order("created_at", { ascending: false });
         if (data) setEstimates(data);
       }
     };
     fetchEstimates();
-  }, [supabase, user]);
+  }, [supabase, session?.user]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -47,12 +44,12 @@ export default function EstimateRequestForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!session?.user) return;
 
     const budgetCents = Math.round(parseFloat(form.budget) * 100);
 
     await supabase.from("estimates").insert({
-      user_id: user.id,
+      user_id: session.user.id,
       title: form.title || "Untitled",
       description: form.description,
       timeline: form.timeline,
@@ -66,7 +63,7 @@ export default function EstimateRequestForm() {
     const { data } = await supabase
       .from("estimates")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("user_id", session.user.id)
       .order("created_at", { ascending: false });
 
     if (data) setEstimates(data);
@@ -202,82 +199,6 @@ export default function EstimateRequestForm() {
           </tbody>
         </table>
       </div>
-
-      {/* New Estimate Form Modal */}
-      <AnimatePresence>
-        {showForm && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center"
-          >
-            <form
-              onSubmit={handleSubmit}
-              className="bg-white dark:bg-zinc-900 p-6 rounded-lg shadow-xl w-full max-w-md space-y-4 border border-brand-muted dark:border-brand-blue"
-            >
-              <h3 className="text-xl font-bold">Submit New Estimate</h3>
-              <div>
-                <label className="block text-sm font-semibold mb-1">Title (optional)</label>
-                <input name="title" value={form.title} onChange={handleChange} className="w-full px-3 py-2 bg-zinc-100 dark:bg-zinc-800" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-orange-500 mb-1">Description *</label>
-                <textarea name="description" required value={form.description} onChange={handleChange} className="w-full px-3 py-2 bg-zinc-100 dark:bg-zinc-800" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold mb-1">Timeline (optional)</label>
-                <select name="timeline" value={form.timeline} onChange={handleChange} className="w-full px-3 py-2 bg-zinc-100 dark:bg-zinc-800">
-                  <option value="">Select...</option>
-                  <option value="1-2 weeks">1–2 weeks</option>
-                  <option value="2-4 weeks">2–4 weeks</option>
-                  <option value="4-8 weeks">4–8 weeks</option>
-                  <option value="Flexible">Flexible</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-blue-500 mb-1">Budget ($USD) *</label>
-                <input name="budget" required type="number" step="0.01" value={form.budget} onChange={handleChange} className="w-full px-3 py-2 bg-zinc-100 dark:bg-zinc-800" />
-              </div>
-              <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 bg-zinc-400 text-white rounded hover:bg-zinc-500">
-                  Cancel
-                </button>
-                <button type="submit" className="px-4 py-2 bg-brand-yellow text-black rounded hover:bg-brand-orange">
-                  Submit Estimate Request
-                </button>
-              </div>
-            </form>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Estimate Review Modal */}
-      <AnimatePresence>
-        {selectedEstimate && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4"
-          >
-            <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg w-full max-w-md p-6 border border-brand-muted dark:border-brand-blue space-y-4">
-              <h3 className="text-xl font-bold">Review Admin Estimate</h3>
-              <p><strong>Title:</strong> {selectedEstimate.title}</p>
-              <p><strong>Description:</strong> {selectedEstimate.description}</p>
-              <p><strong>Budget:</strong> ${(selectedEstimate.budget / 100).toFixed(2)}</p>
-              <p><strong>Timeline:</strong> {selectedEstimate.timeline || "Flexible"}</p>
-              <div className="flex justify-between pt-4">
-                <button onClick={() => setSelectedEstimate(null)} className="px-4 py-2 bg-zinc-500 text-white rounded hover:bg-zinc-600">Close</button>
-                <div className="flex gap-2">
-                  <button onClick={() => approveEstimate(selectedEstimate.id)} className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">Approve</button>
-                  <button onClick={() => rejectEstimate(selectedEstimate.id)} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">Reject</button>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </section>
   );
 }

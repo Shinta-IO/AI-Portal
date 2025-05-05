@@ -1,56 +1,41 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import { useSupabaseClient, useUser } from "@supabase/auth-helpers-react";
-import type { Database } from "@/types";
+import { createSupabaseServerClient } from "@/lib/supabase";
 import Layout from "@/components/Layout";
-import LoadingSpinner from "@/components/shared/LoadingSpinner";
-import { motion } from "framer-motion";
 import { Sparkles } from "lucide-react";
+import { motion } from "framer-motion";
 
-export default function CrowdProjectsPage() {
-  const supabase = useSupabaseClient<Database>();
-  const user = useUser();
-  const [loading, setLoading] = useState(true);
-  const [projects, setProjects] = useState<any[]>([]);
-  const [joinedIds, setJoinedIds] = useState<Set<string>>(new Set());
+export default async function CrowdProjectsPage() {
+  const supabase = await createSupabaseServerClient();
 
-  useEffect(() => {
-    const loadData = async () => {
-      if (!user?.id) return;
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
 
-      const [{ data: projectsData }, { data: joined }] = await Promise.all([
-        supabase.from("crowd_projects").select("*").eq("status", "open").order("created_at", { ascending: false }),
-        supabase.from("crowd_participation").select("crowd_project_id").eq("user_id", user.id),
-      ]);
-
-      setProjects(projectsData || []);
-      setJoinedIds(new Set((joined || []).map((p) => p.crowd_project_id)));
-      setLoading(false);
-    };
-
-    loadData();
-  }, [user?.id, supabase]);
-
-  const handleJoin = async (projectId: string) => {
-    if (!user?.id || joinedIds.has(projectId)) return;
-
-    await supabase
-      .from("crowd_participation")
-      .insert({ user_id: user.id, crowd_project_id: projectId, amount: 0, paid: false });
-
-    setJoinedIds((prev) => new Set(prev).add(projectId));
-  };
-
-  if (!user || loading) {
+  if (authError || !user) {
     return (
       <Layout>
         <div className="min-h-screen flex items-center justify-center bg-brand-light dark:bg-brand-dark">
-          <LoadingSpinner />
+          <div className="text-red-500 font-semibold text-lg">
+            You must be logged in to view Crowd Projects.
+          </div>
         </div>
       </Layout>
     );
   }
+
+  const [{ data: projects }, { data: joined }] = await Promise.all([
+    supabase
+      .from("crowd_projects")
+      .select("*")
+      .eq("status", "open")
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("crowd_participation")
+      .select("crowd_project_id")
+      .eq("user_id", user.id),
+  ]);
+
+  const joinedIds = new Set((joined || []).map((p) => p.crowd_project_id));
 
   return (
     <Layout>
@@ -72,9 +57,12 @@ export default function CrowdProjectsPage() {
           </div>
 
           <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {projects.map((project) => {
+            {(projects || []).map((project) => {
               const joined = joinedIds.has(project.id);
-              const progress = Math.min(100, (project.current_amount / project.goal_amount) * 100);
+              const progress = Math.min(
+                100,
+                (project.current_amount / project.goal_amount) * 100
+              );
 
               return (
                 <motion.div
@@ -91,7 +79,10 @@ export default function CrowdProjectsPage() {
 
                   <div className="mb-4">
                     <div className="w-full bg-zinc-200 dark:bg-zinc-800 h-2 rounded-full overflow-hidden">
-                      <div className="h-2 bg-brand-yellow" style={{ width: `${progress}%` }} />
+                      <div
+                        className="h-2 bg-brand-yellow"
+                        style={{ width: `${progress}%` }}
+                      />
                     </div>
                     <p className="text-xs mt-1 text-zinc-500">
                       ${project.current_amount} of ${project.goal_amount} funded
@@ -99,7 +90,6 @@ export default function CrowdProjectsPage() {
                   </div>
 
                   <button
-                    onClick={() => handleJoin(project.id)}
                     disabled={joined}
                     className={`w-full py-2 text-sm font-semibold rounded-md transition-all ${
                       joined
