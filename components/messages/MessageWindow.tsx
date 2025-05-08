@@ -2,8 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useSupabase } from "@/lib/supabase/SupabaseContext";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2 } from "lucide-react";
 import clsx from "clsx";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface Props {
   channelId: string | null;
@@ -27,7 +31,6 @@ export default function MessageWindow({ channelId }: Props) {
   const [isTyping, setIsTyping] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
 
-  // Fetch user ID and initial messages
   useEffect(() => {
     if (!channelId) return;
 
@@ -51,12 +54,10 @@ export default function MessageWindow({ channelId }: Props) {
     fetchInitialData();
   }, [channelId, supabase]);
 
-  // Scroll to latest
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Realtime subscription
   useEffect(() => {
     if (!channelId) return;
 
@@ -70,9 +71,18 @@ export default function MessageWindow({ channelId }: Props) {
           table: "messages",
           filter: `channel_id=eq.${channelId}`,
         },
-        (payload) => {
-          const msg = payload.new as Message;
-          setMessages((prev) => [...prev, msg]);
+        async (payload) => {
+          const insertedId = payload.new.id;
+
+          const { data, error } = await supabase
+            .from("messages_with_profiles")
+            .select("*")
+            .eq("id", insertedId)
+            .single();
+
+          if (data && !error) {
+            setMessages((prev) => [...prev, data]);
+          }
         }
       )
       .subscribe();
@@ -98,14 +108,14 @@ export default function MessageWindow({ channelId }: Props) {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-zinc-900 relative">
-      <div className="flex-1 overflow-y-auto hide-scrollbar p-4 pb-36 space-y-4">
+    <div className="flex flex-col h-full bg-background text-foreground relative">
+      <ScrollArea className="flex-1 p-4 pb-36">
         {loading ? (
-          <div className="flex justify-center pt-10 text-zinc-500">
+          <div className="flex justify-center pt-10 text-muted-foreground">
             <Loader2 className="animate-spin w-6 h-6" />
           </div>
         ) : (
-          <>
+          <div className="space-y-4">
             {messages.map((msg) => {
               const isMe = msg.sender_id === userId;
               const sender = msg.sender_profile_full_name || "User";
@@ -123,54 +133,48 @@ export default function MessageWindow({ channelId }: Props) {
                     isMe ? "self-end flex-row-reverse" : "self-start"
                   )}
                 >
-                  {avatar ? (
-                    <img
-                      src={avatar}
+                  <Avatar className="h-9 w-9">
+                    <AvatarImage
+                      src={avatar || undefined}
                       alt={sender}
-                      className="w-9 h-9 rounded-full object-cover border border-zinc-300 dark:border-zinc-700"
+                      className="rounded-full object-cover w-full h-full"
                     />
-                  ) : (
-                    <div className="w-9 h-9 rounded-full bg-brand text-white flex items-center justify-center font-semibold text-sm">
-                      {sender.charAt(0).toUpperCase()}
-                    </div>
-                  )}
+                    <AvatarFallback>
+                      {sender?.charAt(0).toUpperCase() || "U"}
+                    </AvatarFallback>
+                  </Avatar>
                   <div
                     className={clsx(
                       "px-4 py-2 rounded-xl shadow max-w-xs md:max-w-md",
-                      isMe
-                        ? "bg-brand text-white"
-                        : "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white"
+                      isMe ? "bg-brand text-white" : "bg-muted text-foreground"
                     )}
                   >
-                    <div className="text-xs font-medium text-zinc-300 dark:text-zinc-400 mb-1">
-                      {sender}
+                    <div className="text-xs font-semibold text-muted-foreground mb-1">
+                      {sender} — {time}
                     </div>
-                    <div className="text-sm">{msg.content}</div>
-                    <div className="text-xs text-zinc-400 text-right mt-1">
-                      {time}
-                    </div>
+                    <div className="text-sm whitespace-pre-wrap">{msg.content}</div>
                   </div>
                 </div>
               );
             })}
             {isTyping && (
-              <div className="text-xs text-zinc-400 italic px-2">Someone is typing...</div>
+              <div className="text-xs text-muted-foreground italic px-2">
+                Someone is typing...
+              </div>
             )}
-          </>
+            <div ref={endRef} />
+          </div>
         )}
-        <div ref={endRef} />
-      </div>
+      </ScrollArea>
 
-      {/* Input */}
       <form
         onSubmit={(e) => {
           e.preventDefault();
           sendMessage();
         }}
-        className="fixed bottom-0 left-64 right-0 z-20 border-t border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-6 py-4 flex items-center gap-3"
+        className="fixed bottom-0 left-64 right-0 z-20 border-t border-border bg-background px-6 py-4 flex items-center gap-3"
       >
-        <input
-          type="text"
+        <Input
           value={input}
           onChange={(e) => {
             setInput(e.target.value);
@@ -178,26 +182,11 @@ export default function MessageWindow({ channelId }: Props) {
             setTimeout(() => setIsTyping(false), 1000);
           }}
           placeholder="Type your message..."
-          className="flex-1 px-4 py-2 rounded border dark:bg-zinc-800 dark:border-zinc-600"
         />
-        <button
-          type="submit"
-          className="bg-brand text-white px-5 py-2 rounded hover:bg-brand-dark transition"
-        >
+        <Button type="submit" className="bg-brand text-white">
           Send
-        </button>
+        </Button>
       </form>
-
-      {/* Scrollbar styles */}
-      <style jsx>{`
-        .hide-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-        .hide-scrollbar {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-      `}</style>
     </div>
   );
 }

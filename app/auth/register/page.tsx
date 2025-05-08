@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 import { supabaseClient as supabase } from "@/lib/supabase/client";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Icons } from "@/components/shared/icons";
 import LoadingSpinner from "@/components/shared/LoadingSpinner";
 
 export default function RegisterPage() {
@@ -41,7 +45,7 @@ export default function RegisterPage() {
       email,
       password,
       options: {
-        data: { role: "user" }, // default role assignment
+        data: { role: "user" },
       },
     });
 
@@ -66,13 +70,13 @@ export default function RegisterPage() {
   return (
     <main className="relative min-h-screen flex items-center justify-center bg-brand-light dark:bg-brand-dark overflow-hidden transition-colors">
       <motion.div
-        className="absolute inset-0 bg-gradient-to-br from-brand-primary via-brand-accent to-brand-blue opacity-20 sm:opacity-30 blur-3xl"
+        className="absolute inset-0 bg-gradient-to-br from-brand-accent via-brand-primary to-brand-yellow opacity-20 sm:opacity-30 blur-3xl"
         animate={{ rotate: 360 }}
         transition={{ repeat: Infinity, duration: 40, ease: "linear" }}
       />
 
       <motion.div
-        className="relative z-10 w-full max-w-md rounded-2xl border border-brand-muted dark:border-neon-purple bg-overlay-light dark:bg-overlay-dark backdrop-blur-xl px-4 sm:px-8 py-8 shadow-xl"
+        className="relative z-10 w-full max-w-md rounded-2xl border border-brand-muted dark:border-brand-blue bg-overlay-light dark:bg-overlay-dark backdrop-blur-xl px-4 sm:px-8 py-8 shadow-xl"
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8 }}
@@ -89,47 +93,51 @@ export default function RegisterPage() {
         </p>
 
         {error && (
-          <div className="mb-4 bg-red-500 text-white text-sm text-center rounded px-4 py-2">
-            {error}
-          </div>
+          <Alert variant="destructive" className="mb-4">
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         )}
 
         <form onSubmit={handleRegister} className="space-y-4">
-          <input
+          <Input
             type="email"
             placeholder="Email"
             autoComplete="email"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-4 py-2 rounded bg-white dark:bg-zinc-800 border border-brand-muted dark:border-zinc-700 text-black dark:text-white placeholder-brand-muted focus:outline-none focus:ring-2 focus:ring-brand-accent"
           />
-          <input
+          <Input
             type="password"
             placeholder="Password"
             autoComplete="new-password"
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-4 py-2 rounded bg-white dark:bg-zinc-800 border border-brand-muted dark:border-zinc-700 text-black dark:text-white placeholder-brand-muted focus:outline-none focus:ring-2 focus:ring-brand-accent"
           />
-          <input
+          <Input
             type="password"
             placeholder="Confirm Password"
             autoComplete="new-password"
             required
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
-            className="w-full px-4 py-2 rounded bg-white dark:bg-zinc-800 border border-brand-muted dark:border-zinc-700 text-black dark:text-white placeholder-brand-muted focus:outline-none focus:ring-2 focus:ring-brand-accent"
           />
 
-          <button
+          <Button
             type="submit"
             disabled={loading}
-            className="w-full py-2 rounded-md bg-brand-yellow text-black font-semibold shadow-md hover:shadow-neon transition-all"
+            className="w-full font-bold"
           >
-            {loading ? "Creating account..." : "Create Account"}
-          </button>
+            {loading ? (
+              <span className="flex items-center gap-2">
+                <Icons.spinner className="w-4 h-4 animate-spin" /> Creating...
+              </span>
+            ) : (
+              "Create Account"
+            )}
+          </Button>
         </form>
 
         <p className="text-center text-xs text-brand-muted dark:text-brand-blue mt-6">

@@ -1,18 +1,10 @@
-import Sidebar from "@/components/sidebar/Sidebar";
-import Header from "@/components/layout/Header";
+// app/dashboard/layout.tsx
+import DashboardLayout from "@/components/Layout";
 
-export default function DashboardLayout({
+export default function DashboardPageLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <div className="flex min-h-screen bg-brand-light dark:bg-brand-dark text-black dark:text-white">
-      <Sidebar />
-      <div className="flex-1 ml-0 lg:ml-64 flex flex-col">
-        <Header />
-        <main className="flex-1 p-4 sm:p-6">{children}</main>
-      </div>
-    </div>
-  );
+  return <DashboardLayout>{children}</DashboardLayout>;
 }

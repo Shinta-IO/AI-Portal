@@ -1,19 +1,15 @@
 "use client";
 
-import {
-  Home,
-  FolderKanban,
-  FileText,
-  FileEdit,
-  Users2,
-  MessageCircle,
-  Settings as SettingsIcon,
-} from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useSupabase } from "@/lib/supabase/SupabaseContext";
-import SidebarItem from "@/components/sidebar/SidebarItem";
+import { navTabs, adminTabs } from "@/constants/navConfig";
+import SidebarItem, { SidebarAvatar } from "@/components/sidebar/SidebarItem";
+import { useBadgeNotifications } from "@/hooks/useBadgeNotifications";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { Settings as SettingsIcon } from "lucide-react";
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -22,22 +18,10 @@ export default function Sidebar() {
 
   const [role, setRole] = useState<string | null>(null);
   const [hovered, setHovered] = useState<string | null>(null);
-  const [badgeCounts, setBadgeCounts] = useState<Record<string, number>>({});
-
+  const badgeCounts = useBadgeNotifications();
   const user = session?.user;
 
-  const tabs = [
-    { href: "/dashboard", label: "Dashboard", icon: Home },
-    { href: "/projects", label: "Projects", icon: FolderKanban, table: "project_members" },
-    { href: "/invoices", label: "Invoices", icon: FileText, table: "invoices" },
-    { href: "/estimates", label: "Estimates", icon: FileEdit, table: "estimates" },
-    { href: "/crowd", label: "Crowd Projects", icon: Users2, table: "crowd_participation" },
-    { href: "/messages", label: "Messages", icon: MessageCircle, table: "messages" },
-  ];
-
-  const adminTabs = role === "admin" ? [
-    { href: "/admin", label: "Admin Panel", icon: SettingsIcon }
-  ] : [];
+  const [profile, setProfile] = useState<{ first_name?: string; avatar_url?: string } | null>(null);
 
   useEffect(() => {
     if (session?.user?.user_metadata?.role) {
@@ -46,49 +30,20 @@ export default function Sidebar() {
   }, [session]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user?.id) return;
 
-    const fetchCounts = async () => {
-      const updates: Record<string, number> = {};
-      for (const tab of tabs) {
-        if (!tab.table) continue;
+    const loadProfile = async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("first_name, avatar_url")
+        .eq("id", user.id)
+        .single();
 
-        const { data: visit } = await supabase
-          .from("last_visited")
-          .select("visited_at")
-          .eq("user_id", user.id)
-          .eq("tab", tab.href)
-          .maybeSingle();
-
-        const { count } = await supabase
-          .from(tab.table)
-          .select("*", { count: "exact", head: true })
-          .gte("created_at", visit?.visited_at || "1970-01-01T00:00:00Z")
-          .eq(
-            ["invoices", "estimates", "project_members"].includes(tab.table) ? "user_id" : undefined,
-            user.id
-          );
-
-        updates[tab.href] = count || 0;
-      }
-      setBadgeCounts(updates);
+      if (!error && data) setProfile(data);
     };
 
-    fetchCounts();
-
-    const subs = tabs
-      .filter(t => t.table)
-      .map(t =>
-        supabase
-          .channel(t.table!)
-          .on("postgres_changes", { event: "*", schema: "public", table: t.table! }, fetchCounts)
-          .subscribe()
-      );
-
-    return () => {
-      subs.forEach(sub => supabase.removeChannel(sub));
-    };
-  }, [supabase, user?.id]);
+    loadProfile();
+  }, [user?.id, supabase]);
 
   const handleClick = async (href: string) => {
     if (!user) return;
@@ -99,21 +54,28 @@ export default function Sidebar() {
       visited_at: new Date().toISOString(),
     });
 
-    setBadgeCounts(prev => ({ ...prev, [href]: 0 }));
     router.push(href);
   };
 
   return (
-    <aside className="fixed top-0 left-0 h-screen w-16 lg:w-64 bg-brand-light dark:bg-brand-dark border-r border-zinc-300 dark:border-zinc-800 z-40 flex flex-col py-4 transition-all duration-300">
-      <div className="flex items-center justify-center lg:justify-start gap-2 px-4 mb-8">
-        <Image src="/logo.png" alt="Logo" width={32} height={32} priority />
-        <span className="hidden lg:inline-block text-xl font-heading font-bold text-brand-dark dark:text-white">
+    <aside className="fixed top-0 left-0 h-screen w-16 lg:w-64 z-40 flex flex-col py-4 transition-all duration-300 shadow-sm border-r border-border bg-slate-600 dark:bg-background/60 backdrop-blur-md">
+      {/* Background Image Overlay */}
+      <div
+        className="absolute inset-0 opacity-50 pointer-events-none dark:mix-blend-lighten bg-cover bg-center"
+        style={{ backgroundImage: 'url("/sidebar.png")' }}
+      />
+
+      {/* Logo */}
+      <div className="relative z-10 flex items-center justify-center lg:justify-start gap-2 px-4 mb-6">
+        <Image src="/logo.png" alt="Logo" width={64} height={64} priority />
+        <span className="hidden lg:inline-block text-xl font-heading font-bold text-foreground">
           Pixel Pro
         </span>
       </div>
 
-      <nav className="flex flex-col gap-2 flex-1">
-        {[...tabs, ...adminTabs].map(({ href, label, icon }) => (
+      {/* Nav Items */}
+      <ScrollArea className="relative z-10 flex-1 px-2">
+        {[...navTabs, ...(role === "admin" ? adminTabs : [])].map(({ href, label, icon }) => (
           <SidebarItem
             key={href}
             href={href}
@@ -121,14 +83,17 @@ export default function Sidebar() {
             icon={icon}
             hovered={hovered}
             setHovered={setHovered}
-            badgeCount={badgeCounts[href]}
+            badgeCount={badgeCounts[href] || 0}
             active={pathname === href}
             onClick={() => handleClick(href)}
           />
         ))}
-      </nav>
+      </ScrollArea>
 
-      <div className="mt-auto px-2">
+      {/* Settings and Avatar */}
+      <Separator className="relative z-10 my-2 mx-4" />
+
+      <div className="relative z-10 px-2">
         <SidebarItem
           href="/settings"
           label="Settings"
@@ -139,6 +104,15 @@ export default function Sidebar() {
           onClick={() => handleClick("/settings")}
         />
       </div>
+
+      {user && (
+        <div className="relative z-10">
+          <SidebarAvatar
+            name={profile?.first_name || user.email || "User"}
+            avatarUrl={profile?.avatar_url}
+          />
+        </div>
+      )}
     </aside>
   );
 }

@@ -1,103 +1,87 @@
+// app/dashboard/page.tsx
 "use client";
 
+import { useEffect, useState } from "react";
 import { useSupabase } from "@/lib/supabase/SupabaseContext";
-import { motion } from "framer-motion";
-import { FileText, BarChart2, MessageSquare, Receipt, Settings } from "lucide-react";
-import LoadingSpinner from "@/components/shared/LoadingSpinner";
-import Link from "next/link";
+import UserProfileCard from "@/components/dashboard/UserProfileCard";
+import QuickAccessCard from "@/components/dashboard/QuickAccessCard";
+import ProjectTrackerCard from "@/components/dashboard/ProjectTrackerCard";
 
-export default function DashboardPage() {
-  const { session } = useSupabase();
+export default function ClientDashboardPage() {
+  const { supabase, session } = useSupabase();
+  const [profile, setProfile] = useState<any>(null);
+  const [projects, setProjects] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
 
-  if (!session) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-brand-light dark:bg-brand-dark">
-        <LoadingSpinner />
-      </div>
-    );
-  }
+  const userId = session?.user?.id;
 
-  const username = session.user.email?.split("@")[0] || "User";
+  useEffect(() => {
+    if (!userId) return;
 
-  const cards = [
-    {
-      title: "New Estimate",
-      desc: "Start a service inquiry",
-      icon: <FileText className="w-5 h-5 text-white" />,
-      href: "/estimates",
-      color: "from-brand-accent to-brand-primary",
-    },
-    {
-      title: "Track Progress",
-      desc: "View current project status",
-      icon: <BarChart2 className="w-5 h-5 text-white" />,
-      href: "/projects",
-      color: "from-brand-yellow to-brand-orange",
-    },
-    {
-      title: "Inbox",
-      desc: "Check your messages",
-      icon: <MessageSquare className="w-5 h-5 text-white" />,
-      href: "/messages",
-      color: "from-brand-blue to-brand-pink",
-    },
-    {
-      title: "Invoices",
-      desc: "Review and pay invoices",
-      icon: <Receipt className="w-5 h-5 text-white" />,
-      href: "/invoices",
-      color: "from-brand-primary to-brand-magenta",
-    },
-    {
-      title: "Settings",
-      desc: "Update your profile",
-      icon: <Settings className="w-5 h-5 text-white" />,
-      href: "/settings",
-      color: "from-brand-muted to-brand-accent",
-    },
-  ];
+    const fetchData = async () => {
+      const { data: profileData, error } = await supabase
+        .from("profiles")
+        .select("*, projects (*)")
+        .eq("id", userId)
+        .single();
+
+      if (error || !profileData) {
+        console.error("❌ Profile fetch error or not found:", error?.message);
+        return;
+      }
+
+      setProfile(profileData);
+      setProjects(profileData.projects || []);
+      setActiveProjectId(profileData.projects?.[0]?.id || null);
+    };
+
+    fetchData();
+  }, [userId]);
+
+  useEffect(() => {
+    if (!userId) return;
+
+    const channel = supabase
+      .channel("unread-messages")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, (payload) => {
+        if (payload.new.receiver_id === userId) {
+          setUnreadCount((prev) => prev + 1);
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId]);
+
+  if (!session?.user) return <div className="p-4 text-red-500">Not authenticated.</div>;
+
+  if (!profile) return <div className="p-4 text-muted-foreground">Loading your dashboard...</div>;
 
   return (
-    <main className="relative min-h-screen px-4 sm:px-8 py-12 bg-brand-light dark:bg-brand-dark transition-colors">
-      {/* Background glow */}
-      <motion.div
-        className="absolute inset-0 bg-gradient-to-br from-brand-primary via-brand-accent to-brand-blue opacity-10 sm:opacity-20 blur-3xl z-0"
-        animate={{ rotate: 360 }}
-        transition={{ repeat: Infinity, duration: 60, ease: "linear" }}
+    <div className="grid gap-4 p-4">
+      <UserProfileCard
+        profile={profile}
+        unreadCount={unreadCount}
+        projectStats={{
+          active: projects.filter((p) => p.status === "active").length,
+          completed: projects.filter((p) => p.status === "completed").length,
+        }}
       />
 
-      <div className="relative z-10 max-w-7xl mx-auto space-y-8">
-        <div className="text-center">
-          <h1 className="text-4xl font-heading font-bold bg-gradient-to-r from-brand-accent via-brand-primary to-brand-yellow text-transparent bg-clip-text">
-            Welcome back, {username}
-          </h1>
-          <p className="text-brand-muted dark:text-brand-blue mt-2">
-            Let’s get productive — your tools are ready.
-          </p>
-        </div>
-
-        <section>
-          <h2 className="text-lg font-semibold text-brand-primary dark:text-brand-accent mb-4">
-            Quick Actions
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {cards.map((card, i) => (
-              <Link href={card.href} key={i}>
-                <motion.div
-                  whileHover={{ scale: 1.04 }}
-                  className={`p-5 rounded-xl bg-gradient-to-br ${card.color} text-white shadow-md hover:shadow-neon cursor-pointer transition-all`}
-                >
-                  <div className="flex items-center gap-3">
-                    {card.icon}
-                    <h3 className="text-md font-semibold">{card.title}</h3>
-                  </div>
-                  <p className="text-sm mt-2 text-white/80">{card.desc}</p>
-                </motion.div>
-              </Link>
-            ))}
-          </div>
-        </section>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <QuickAccessCard type="estimates" userId={userId} />
+        <QuickAccessCard type="invoices" userId={userId} />
+        <QuickAccessCard type="crowd" userId={userId} />
       </div>
-    </main>
+
+      <ProjectTrackerCard
+        projects={projects}
+        activeProjectId={activeProjectId}
+        onSwitchProject={setActiveProjectId}
+      />
+    </div>
   );
 }

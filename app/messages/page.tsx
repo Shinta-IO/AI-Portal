@@ -11,7 +11,7 @@ export default function MessagesPage() {
 
   return (
     <Layout>
-      <div className="grid grid-cols-1 md:grid-cols-[300px_1fr] h-[calc(100vh-4rem)]">
+      <div className="grid grid-cols-1 md:grid-cols-[300px_1fr] h-[calc(100vh-4rem)] overflow-hidden">
         <ConversationList onSelectChannel={setActiveChannelId} />
         <MessageWindow channelId={activeChannelId} />
       </div>

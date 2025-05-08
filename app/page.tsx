@@ -3,12 +3,19 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { supabaseClient } from "@/lib/supabase/client";
 
-export default function HomePage() {
+export default function HomeRedirect() {
   const router = useRouter();
 
   useEffect(() => {
-    router.push("/dashboard");
+    supabaseClient.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        router.replace("/dashboard");
+      } else {
+        router.replace("/auth/login");
+      }
+    });
   }, [router]);
 
   return null;
