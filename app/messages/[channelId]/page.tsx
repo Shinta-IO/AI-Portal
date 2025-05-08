@@ -26,12 +26,18 @@ async function getServerClient() {
   );
 }
 
+// Define params type as Promise
+type ParamsType = Promise<{ channelId: string }>;
+
 // ✅ Server component page handler
 export default async function MessagePage({
   params
 }: {
-  params: { channelId: string }
+  params: ParamsType
 }) {
+  // Await the params Promise to get the actual parameters
+  const { channelId } = await params;
+  
   const supabase = await getServerClient();
 
   const {
@@ -46,7 +52,7 @@ export default async function MessagePage({
   const { data: channel, error: channelError } = await supabase
     .from("channels")
     .select("*, projects(id, title), channel_members(user_id)")
-    .eq("id", params.channelId)
+    .eq("id", channelId)
     .single();
 
   if (channelError || !channel) {
