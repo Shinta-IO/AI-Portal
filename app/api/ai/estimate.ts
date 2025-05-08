@@ -52,11 +52,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No response from Enzo" }, { status: 500 });
   }
 
+  // Get response text safely checking for content type
+  let responseText = "";
+  if (last.content && last.content.length > 0) {
+    const content = last.content[0];
+    if (content.type === 'text' && content.text) {
+      responseText = content.text.value || "";
+    }
+  }
+
   // Update estimate with response
   await supabase
     .from("estimates")
-    .update({ enzo: { response: last.content[0]?.text?.value || "" } })
+    .update({ enzo: { response: responseText } })
     .eq("id", estimate.id);
 
-  return NextResponse.json({ success: true, response: last.content[0]?.text?.value });
+  return NextResponse.json({ success: true, response: responseText });
 }
