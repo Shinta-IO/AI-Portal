@@ -18,7 +18,7 @@ const COLOR_OPTIONS: Record<string, { className: string; glow: string }> = {
   orange: { className: "bg-orange-300", glow: "shadow-[0_0_8px_rgba(255,165,0,0.5)]" },
 };
 
-// Define a custom type for tasks that includes all needed properties
+// Define a custom type for tasks
 type UserVisibleTask = {
   id: string;
   project_id: string;
