@@ -1,5 +1,4 @@
 // app/messages/[channelId]/page.tsx
-import { useSupabase } from "@/lib/supabase/SupabaseContext";
 import ConversationList from "@/components/messages/ConversationList";
 import MessageWindow from "@/components/messages/MessageWindow";
 import { redirect } from "next/navigation";
