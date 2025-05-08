@@ -144,7 +144,7 @@ export default function ChannelCreationModal({
       if (toAdd.length) {
         await supabase.from("channel_members").insert(
           toAdd.map((user_id) => ({
-            channel_id,
+            channel_id: channelId,
             user_id,
           }))
         );
