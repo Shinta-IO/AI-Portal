@@ -1,5 +1,5 @@
-import { createSupabaseServerClient } from "@/lib/supabase";
-import Layout from "@/components/Layout";
+// app/messages/[channelId]/page.tsx
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import MessagingSidebar from "@/components/messages/MessagingSidebar";
 import ChatWindow from "@/components/messages/ChatWindow";
 import { redirect } from "next/navigation";
@@ -17,6 +17,7 @@ export default async function ChannelPage({
 }) {
   const supabase = await createSupabaseServerClient();
 
+  // 🔐 Get authenticated user
   const {
     data: { user },
     error: authError,
@@ -26,6 +27,7 @@ export default async function ChannelPage({
     redirect("/login");
   }
 
+  // 📦 Fetch channel with member and project info
   const { data: channel, error: channelError } = await supabase
     .from("channels")
     .select("*, projects(id, title), channel_members(user_id)")
@@ -34,28 +36,26 @@ export default async function ChannelPage({
 
   if (channelError || !channel) {
     return (
-      <Layout>
-        <div className="p-4 text-center text-red-500">
-          Channel not found or failed to load.
-        </div>
-      </Layout>
+      <div className="flex items-center justify-center h-screen text-red-500">
+        Channel not found or failed to load.
+      </div>
     );
   }
 
+  // ❌ Access Control
   const isMember = channel.channel_members.some(
     (member) => member.user_id === user.id
   );
 
   if (!isMember) {
     return (
-      <Layout>
-        <div className="p-4 text-center text-red-500">
-          You are not a member of this channel.
-        </div>
-      </Layout>
+      <div className="flex items-center justify-center h-screen text-red-500">
+        You are not a member of this channel.
+      </div>
     );
   }
 
+  // ✅ Render sidebar + chat
   return (
     <div className="flex h-screen">
       <MessagingSidebar currentChannelId={params.channelId} />
