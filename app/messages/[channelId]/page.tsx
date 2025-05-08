@@ -20,14 +20,18 @@ async function getServerClient() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get: (key) => cookieStore.get(key)?.value ?? null,
+        get: (name) => cookieStore.get(name)?.value,
       },
     }
   );
 }
 
 // ✅ Server component page handler
-export default async function ChannelPage({ params }: { params: { channelId: string } }) {
+export default async function MessagePage({
+  params
+}: {
+  params: { channelId: string }
+}) {
   const supabase = await getServerClient();
 
   const {
@@ -54,7 +58,7 @@ export default async function ChannelPage({ params }: { params: { channelId: str
   }
 
   const isMember = channel.channel_members.some(
-    (member) => member.user_id === user.id
+    (member: { user_id: string }) => member.user_id === user.id
   );
 
   if (!isMember) {
