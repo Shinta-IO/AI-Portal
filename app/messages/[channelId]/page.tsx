@@ -26,13 +26,15 @@ async function getServerClient() {
   );
 }
 
+// Define params as a Promise
+interface PageProps {
+  params: Promise<{ channelId: string }>;
+}
+
 // Server component page handler
-export default async function MessagePage({
-  params
-}: {
-  params: { channelId: string }
-}) {
-  const { channelId } = params;
+export default async function MessagePage({ params }: PageProps) {
+  // Await the params Promise to get the actual parameters
+  const { channelId } = await params;
   
   const supabase = await getServerClient();
 
