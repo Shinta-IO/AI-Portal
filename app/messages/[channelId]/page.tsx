@@ -1,23 +1,37 @@
 // app/messages/[channelId]/page.tsx
-import { createSupabaseServerClient } from "@/lib/supabase/server";
-import MessagingSidebar from "@/components/messages/MessagingSidebar";
-import ChatWindow from "@/components/messages/ChatWindow";
+import { useSupabase } from "@/lib/supabase/SupabaseContext";
+import ConversationList from "@/components/messages/ConversationList";
+import MessageWindow from "@/components/messages/MessageWindow";
 import { redirect } from "next/navigation";
 import type { Database } from "@/types";
+import { cookies } from "next/headers";
+import { createServerClient } from "@supabase/ssr";
 
 type Channel = Database["public"]["Tables"]["channels"]["Row"] & {
   projects: Pick<Database["public"]["Tables"]["projects"]["Row"], "id" | "title"> | null;
   channel_members: { user_id: string }[];
 };
 
+async function getServerClient() {
+  const cookieStore = cookies();
+  return createServerClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get: (key) => cookieStore.get(key)?.value ?? null,
+      },
+    }
+  );
+}
+
 export default async function ChannelPage({
   params,
 }: {
   params: { channelId: string };
 }) {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await getServerClient();
 
-  // 🔐 Get authenticated user
   const {
     data: { user },
     error: authError,
@@ -27,7 +41,6 @@ export default async function ChannelPage({
     redirect("/login");
   }
 
-  // 📦 Fetch channel with member and project info
   const { data: channel, error: channelError } = await supabase
     .from("channels")
     .select("*, projects(id, title), channel_members(user_id)")
@@ -42,7 +55,6 @@ export default async function ChannelPage({
     );
   }
 
-  // ❌ Access Control
   const isMember = channel.channel_members.some(
     (member) => member.user_id === user.id
   );
@@ -55,11 +67,10 @@ export default async function ChannelPage({
     );
   }
 
-  // ✅ Render sidebar + chat
   return (
     <div className="flex h-screen">
-      <MessagingSidebar currentChannelId={params.channelId} />
-      <ChatWindow channel={channel} currentUserId={user.id} />
+      <ConversationList onSelectChannel={() => {}} />
+      <MessageWindow channelId={channel.id} />
     </div>
   );
 }
