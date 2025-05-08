@@ -1,35 +1,35 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { createServerClient } from "@supabase/ssr";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
 
 export async function middleware(req: NextRequest) {
-  const res = NextResponse.next();
+  let res = NextResponse.next();
   
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll: () => req.cookies.getAll(),
-        setAll: (cookiesToSet) => {
+        getAll() {
+          return req.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value, options }) => {
             req.cookies.set(name, value);
           });
           
-          // Return a new response with the updated cookies
-          const newRes = NextResponse.next({
+          // Create a new response with the updated cookies
+          res = NextResponse.next({
             request: {
               headers: req.headers,
             },
           });
           
           cookiesToSet.forEach(({ name, value, options }) => {
-            newRes.cookies.set(name, value, options);
+            res.cookies.set(name, value, options);
           });
-          
-          return newRes;
-        }
-      }
+        },
+      },
     }
   );
 
