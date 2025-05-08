@@ -1,16 +1,44 @@
-import { createMiddlewareClient } from "@supabase/ssr";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { createServerClient } from "@supabase/ssr";
 
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next();
-  const supabase = createMiddlewareClient({ req, res });
+  
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll: () => req.cookies.getAll(),
+        setAll: (cookiesToSet) => {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            req.cookies.set(name, value);
+          });
+          
+          // Return a new response with the updated cookies
+          const newRes = NextResponse.next({
+            request: {
+              headers: req.headers,
+            },
+          });
+          
+          cookiesToSet.forEach(({ name, value, options }) => {
+            newRes.cookies.set(name, value, options);
+          });
+          
+          return newRes;
+        }
+      }
+    }
+  );
 
+  // You can now use the supabase client to authenticate the user
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  const isAuthenticated = !!session;
+  const isAuthenticated = !!user;
   const { pathname } = req.nextUrl;
 
   const protectedRoutes = ["/", "/dashboard", "/projects", "/invoices"];
