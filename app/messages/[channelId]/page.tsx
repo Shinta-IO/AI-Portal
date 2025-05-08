@@ -14,7 +14,7 @@ type Channel = Database["public"]["Tables"]["channels"]["Row"] & {
 
 // Server-side Supabase client with cookie support
 async function getServerClient() {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   return createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -26,17 +26,13 @@ async function getServerClient() {
   );
 }
 
-// Define params type as Promise
-type ParamsType = Promise<{ channelId: string }>;
-
-// ✅ Server component page handler
+// Server component page handler
 export default async function MessagePage({
   params
 }: {
-  params: ParamsType
+  params: { channelId: string }
 }) {
-  // Await the params Promise to get the actual parameters
-  const { channelId } = await params;
+  const { channelId } = params;
   
   const supabase = await getServerClient();
 
