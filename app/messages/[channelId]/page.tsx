@@ -12,6 +12,11 @@ type Channel = Database["public"]["Tables"]["channels"]["Row"] & {
   channel_members: { user_id: string }[];
 };
 
+// PageProps for dynamic route
+type ChannelPageProps = {
+  params: { channelId: string };
+};
+
 // Server-side Supabase client with cookie support
 async function getServerClient() {
   const cookieStore = cookies();
@@ -27,7 +32,7 @@ async function getServerClient() {
 }
 
 // ✅ Server component page handler
-export default async function ChannelPage({ params }: { params: { channelId: string } }) {
+export default async function ChannelPage({ params }: ChannelPageProps) {
   const supabase = await getServerClient();
 
   const {
