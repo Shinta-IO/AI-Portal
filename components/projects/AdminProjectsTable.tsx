@@ -188,7 +188,7 @@ export default function AdminProjectsTable() {
               <Listbox
                 value={null}
                 onChange={(profile) => {
-                  if (!selectedUsers.find((u) => u.id === profile.id)) {
+                  if (profile && !selectedUsers.find((u) => u.id === profile.id)) {
                     setSelectedUsers([...selectedUsers, profile]);
                   }
                 }}
