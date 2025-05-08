@@ -12,6 +12,7 @@ type CrowdProjectCardProps = {
   joined: boolean;
   onView: () => void;
   onJoin: () => void;
+  onEdit?: () => void;
 };
 
 const formatDollars = (amount: number) =>
@@ -29,6 +30,7 @@ export default function CrowdProjectCard({
   joined,
   onView,
   onJoin,
+  onEdit,
 }: CrowdProjectCardProps) {
   const progress = Math.min(100, (current / goal) * 100);
 
