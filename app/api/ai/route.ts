@@ -35,7 +35,15 @@ export async function POST(req: Request) {
 
     const messages = await openai.beta.threads.messages.list(thread.id);
     const reply = messages.data.find((msg) => msg.role === "assistant");
-    const result = reply?.content[0]?.text?.value ?? "Enzo had no answer.";
+    
+    // Get response text safely checking for content type
+    let result = "Enzo had no answer.";
+    if (reply?.content && reply.content.length > 0) {
+      const content = reply.content[0];
+      if (content.type === 'text' && content.text) {
+        result = content.text.value;
+      }
+    }
 
     return Response.json({ result });
   } catch (error: any) {
