@@ -99,22 +99,38 @@ export default function Sidebar() {
 
       {/* Logo */}
       <div className="relative z-10 flex items-center justify-center lg:justify-start gap-3 px-6 mb-8">
-        <div className={`w-10 h-10 lg:w-12 lg:h-12 rounded-full p-0.5 shadow-lg ${
-          isDark 
-            ? "bg-gradient-to-br from-brand-primary to-neon-purple shadow-[0_0_15px_rgba(140,82,255,0.25)]" 
-            : "bg-gradient-to-br from-brand-secondary to-brand-blue"
-        }`}>
-          <div className="w-full h-full rounded-full overflow-hidden bg-black/10 flex items-center justify-center">
-            <Image 
-              src="/logo.png" 
-              alt="Logo" 
-              width={48} 
-              height={48} 
-              priority 
-              className="transform scale-90"
-            />
+        {/* Mobile logo (no decorative container) */}
+        <div className="lg:hidden flex items-center justify-center">
+          <Image 
+            src="/logo.png" 
+            alt="Logo" 
+            width={40} 
+            height={40} 
+            priority 
+            className="w-auto h-auto"
+          />
+        </div>
+        
+        {/* Desktop logo with decorative container - only visible on lg screens */}
+        <div className="hidden lg:block">
+          <div className={`w-12 h-12 rounded-full p-0.5 shadow-lg ${
+            isDark 
+              ? "bg-gradient-to-br from-brand-primary to-neon-purple shadow-[0_0_15px_rgba(140,82,255,0.25)]" 
+              : "bg-gradient-to-br from-brand-secondary to-brand-blue"
+          }`}>
+            <div className="w-full h-full rounded-full overflow-hidden bg-black/10 flex items-center justify-center">
+              <Image 
+                src="/logo.png" 
+                alt="Logo" 
+                width={48} 
+                height={48} 
+                priority 
+                className="transform scale-90"
+              />
+            </div>
           </div>
         </div>
+        
         <span className={`hidden lg:inline-block text-xl font-heading font-bold tracking-wide ${
           isDark 
             ? "text-white drop-shadow-sm bg-clip-text text-transparent bg-gradient-to-r from-white via-brand-pink to-white" 
