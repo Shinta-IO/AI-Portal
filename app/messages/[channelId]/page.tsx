@@ -6,11 +6,13 @@ import type { Database } from "@/types";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 
+// Channel type with related project and membership info
 type Channel = Database["public"]["Tables"]["channels"]["Row"] & {
   projects: Pick<Database["public"]["Tables"]["projects"]["Row"], "id" | "title"> | null;
   channel_members: { user_id: string }[];
 };
 
+// Server-side Supabase client with cookie support
 async function getServerClient() {
   const cookieStore = cookies();
   return createServerClient<Database>(
@@ -24,11 +26,8 @@ async function getServerClient() {
   );
 }
 
-export default async function ChannelPage({
-  params,
-}: {
-  params: { channelId: string };
-}) {
+// ✅ Server component page handler
+export default async function ChannelPage({ params }: { params: { channelId: string } }) {
   const supabase = await getServerClient();
 
   const {
