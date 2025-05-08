@@ -16,7 +16,20 @@ const COLOR_OPTIONS: Record<string, { className: string; glow: string }> = {
   orange: { className: "bg-orange-300", glow: "shadow-[0_0_8px_rgba(255,165,0,0.5)]" },
 };
 
-type UserVisibleTask = Database["public"]["Views"]["user_visible_tasks"]["Row"];
+// Define a custom type for tasks
+type UserVisibleTask = {
+  id: string;
+  project_id: string;
+  title: string;
+  description: string;
+  status: string;
+  assigned_to: string | null;
+  created_at: string;
+  due_date: string | null;
+  color?: string;
+  viewer_id?: string;
+  order_index?: number;
+};
 
 export default function TaskViewer({
   projectId,
@@ -53,7 +66,7 @@ export default function TaskViewer({
         <p className="text-sm text-zinc-400">No tasks available for this project.</p>
       ) : (
         tasks.map((task) => {
-          const colorStyle = COLOR_OPTIONS[task.color] || COLOR_OPTIONS.gray;
+          const colorStyle = task.color ? COLOR_OPTIONS[task.color] : COLOR_OPTIONS.gray;
           return (
             <div
               key={task.id}
