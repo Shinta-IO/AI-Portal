@@ -2,17 +2,46 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2025-04-30.basil",
-});
+// Don't initialize during build time
+let stripe: Stripe | null = null;
+let supabase: any = null;
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+const getStripe = () => {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error("Missing STRIPE_SECRET_KEY");
+  }
+  
+  if (!stripe) {
+    stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: "2025-04-30.basil",
+    });
+  }
+  return stripe;
+};
+
+const getSupabase = () => {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error("Missing Supabase environment variables");
+  }
+  
+  if (!supabase) {
+    supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+  }
+  return supabase;
+};
 
 export async function POST(req: Request) {
   try {
+    const stripeClient = getStripe();
+    const supabaseClient = getSupabase();
+    
+    if (!process.env.NEXT_PUBLIC_BASE_URL) {
+      throw new Error("Missing NEXT_PUBLIC_BASE_URL environment variable");
+    }
+    
     const body = await req.json();
     const { projectId, participants, requesterId } = body;
 
@@ -37,7 +66,7 @@ export async function POST(req: Request) {
 
       const cents = Math.round(amount * 100); // ✅ Ensure backend conversion to cents
 
-      const session = await stripe.checkout.sessions.create({
+      const session = await stripeClient.checkout.sessions.create({
         payment_method_types: ["card"],
         mode: "payment",
         line_items: [
@@ -60,7 +89,7 @@ export async function POST(req: Request) {
         },
       });
 
-      const { error: invoiceError } = await supabase.from("invoices").insert({
+      const { error: invoiceError } = await supabaseClient.from("invoices").insert({
         user_id: userId,
         crowd_project_id: projectId,
         amount: cents,
@@ -73,7 +102,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Failed to insert invoice" }, { status: 500 });
       }
 
-      const { error: participationError } = await supabase.from("crowd_participation").insert({
+      const { error: participationError } = await supabaseClient.from("crowd_participation").insert({
         user_id: userId,
         crowd_project_id: projectId,
         amount: cents,

@@ -11,28 +11,53 @@ const {
   NEXT_PUBLIC_APP_URL,
 } = process.env;
 
-if (!STRIPE_SECRET_KEY || !NEXT_PUBLIC_SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !NEXT_PUBLIC_APP_URL) {
-  throw new Error("Missing required environment variables for Stripe or Supabase.");
-}
+// Don't throw during build, only when the route is called
+const checkEnvVars = () => {
+  if (!STRIPE_SECRET_KEY || !NEXT_PUBLIC_SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !NEXT_PUBLIC_APP_URL) {
+    throw new Error("Missing required environment variables for Stripe or Supabase.");
+  }
+};
 
-// Stripe instance
-const stripe = new Stripe(STRIPE_SECRET_KEY, {
-  apiVersion: "2025-04-30.basil",
-});
+// Stripe instance - initialized only when needed
+let stripe: Stripe | null = null;
+let supabase: any = null;
 
-// Supabase service client
-const supabase = createClient(NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+const getStripe = () => {
+  checkEnvVars();
+  if (!stripe) {
+    stripe = new Stripe(STRIPE_SECRET_KEY!, {
+      apiVersion: "2025-04-30.basil",
+    });
+  }
+  return stripe;
+};
+
+// Supabase service client - initialized only when needed
+const getSupabase = () => {
+  checkEnvVars();
+  if (!supabase) {
+    supabase = createClient(NEXT_PUBLIC_SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
+  }
+  return supabase;
+};
 
 export async function POST(req: NextRequest) {
   try {
+    // Only check env vars when the route is actually called
+    checkEnvVars();
+    
     const { invoiceId } = await req.json();
 
     if (!invoiceId) {
       return NextResponse.json({ error: "Missing invoice ID" }, { status: 400 });
     }
 
+    // Get initialized clients
+    const stripeClient = getStripe();
+    const supabaseClient = getSupabase();
+
     // Fetch invoice from Supabase
-    const { data: invoice, error } = await supabase
+    const { data: invoice, error } = await supabaseClient
       .from("invoices")
       .select("id, amount, user_id")
       .eq("id", invoiceId)
@@ -52,7 +77,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Create Stripe Checkout session
-    const session = await stripe.checkout.sessions.create({
+    const session = await stripeClient.checkout.sessions.create({
       payment_method_types: ["card"],
       line_items: [
         {
