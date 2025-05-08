@@ -18,6 +18,10 @@ const COLOR_OPTIONS: Record<string, { className: string; glow: string }> = {
   orange: { className: "bg-orange-300", glow: "shadow-[0_0_8px_rgba(255,165,0,0.5)]" },
 };
 
+// Define a custom Task type that includes the color property
+type BaseTask = Database["public"]["Tables"]["project_tasks"]["Row"];
+type Task = BaseTask & { color?: string };
+
 export default function TaskManager({
   projectId,
   onTaskChange,
@@ -26,7 +30,7 @@ export default function TaskManager({
   onTaskChange?: () => void;
 }) {
   const { supabase } = useSupabase();
-  const [tasks, setTasks] = useState<Database["public"]["Tables"]["project_tasks"]["Row"][]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [newTaskColor, setNewTaskColor] = useState("brand-yellow");
 
@@ -37,7 +41,7 @@ export default function TaskManager({
       .eq("project_id", projectId)
       .order("order_index", { ascending: true });
 
-    if (data) setTasks(data);
+    if (data) setTasks(data as Task[]);
   };
 
   const triggerUpdate = () => {
@@ -48,12 +52,16 @@ export default function TaskManager({
   const handleCreateTask = async () => {
     if (!newTaskTitle.trim()) return;
 
-    const { error } = await supabase.from("project_tasks").insert({
+    // Type assertion for the insert operation
+    const taskToInsert = {
       project_id: projectId,
       title: newTaskTitle,
       status: "pending",
       color: newTaskColor,
-    });
+      description: "" // Adding this since it's required in the type
+    };
+
+    const { error } = await supabase.from("project_tasks").insert(taskToInsert);
 
     if (!error) {
       setNewTaskTitle("");
@@ -68,7 +76,9 @@ export default function TaskManager({
   };
 
   const updateColor = async (taskId: string, color: string) => {
-    await supabase.from("project_tasks").update({ color }).eq("id", taskId);
+    // We're updating a field that's not in the database schema according to types
+    // but apparently does exist in the actual database
+    await supabase.from("project_tasks").update({ color } as any).eq("id", taskId);
     triggerUpdate();
   };
 
@@ -112,49 +122,54 @@ export default function TaskManager({
 
       {/* Task List */}
       <ul className="space-y-2">
-        {tasks.map((task) => (
-          <li
-            key={task.id}
-            className={clsx(
-              "rounded px-4 py-2 flex justify-between items-center text-black dark:text-white",
-              COLOR_OPTIONS[task.color]?.className || "bg-zinc-100",
-              COLOR_OPTIONS[task.color]?.glow || "",
-              "shadow-sm transition-shadow duration-200 hover:shadow-md"
-            )}
-          >
-            <span className="font-medium text-sm">{task.title}</span>
-            <div className="flex items-center gap-2">
-              <select
-                value={task.status}
-                onChange={(e) => updateStatus(task.id, e.target.value)}
-                className="text-sm px-2 py-1 rounded bg-white dark:bg-zinc-800"
-              >
-                {STATUS_OPTIONS.map((option) => (
-                  <option key={option} value={option}>
-                    {option.replace("_", " ")}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={task.color}
-                onChange={(e) => updateColor(task.id, e.target.value)}
-                className="text-sm px-2 py-1 rounded bg-white dark:bg-zinc-800"
-              >
-                {Object.entries(COLOR_OPTIONS).map(([key]) => (
-                  <option key={key} value={key}>
-                    {key.replace("brand-", "").replace("-", " ")}
-                  </option>
-                ))}
-              </select>
-              <button
-                onClick={() => deleteTask(task.id)}
-                className="text-zinc-600 hover:text-red-600"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-          </li>
-        ))}
+        {tasks.map((task) => {
+          // Get the color option safely - with a default if undefined
+          const colorOption = task.color ? COLOR_OPTIONS[task.color] : undefined;
+          
+          return (
+            <li
+              key={task.id}
+              className={clsx(
+                "rounded px-4 py-2 flex justify-between items-center text-black dark:text-white",
+                colorOption?.className || "bg-zinc-100",
+                colorOption?.glow || "",
+                "shadow-sm transition-shadow duration-200 hover:shadow-md"
+              )}
+            >
+              <span className="font-medium text-sm">{task.title}</span>
+              <div className="flex items-center gap-2">
+                <select
+                  value={task.status}
+                  onChange={(e) => updateStatus(task.id, e.target.value)}
+                  className="text-sm px-2 py-1 rounded bg-white dark:bg-zinc-800"
+                >
+                  {STATUS_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option.replace("_", " ")}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={task.color || "gray"}
+                  onChange={(e) => updateColor(task.id, e.target.value)}
+                  className="text-sm px-2 py-1 rounded bg-white dark:bg-zinc-800"
+                >
+                  {Object.entries(COLOR_OPTIONS).map(([key]) => (
+                    <option key={key} value={key}>
+                      {key.replace("brand-", "").replace("-", " ")}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  onClick={() => deleteTask(task.id)}
+                  className="text-zinc-600 hover:text-red-600"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );
