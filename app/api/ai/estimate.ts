@@ -1,11 +1,12 @@
-// app/api/enzo/estimate.ts
+// app/api/ai/estimate.ts
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseServer as supabase } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/lib/supabase";
 import OpenAI from "openai";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export async function POST(req: NextRequest) {
+  const supabase = await createSupabaseServerClient();
   const { estimateId } = await req.json();
 
   // Fetch estimate + profile
