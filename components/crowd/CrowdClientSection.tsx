@@ -6,7 +6,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import CrowdProjectCard from "./CrowdProjectCard";
 import CrowdProjectDashboard from "./CrowdProjectDashboard";
 import CrowdProjectDetailsModal from "./CrowdProjectDetailsModal";
-import type { CrowdProject } from "./CrowdProject";
+import type { CrowdProject } from "@/types/crowd";
 import { Card, CardContent } from "@/components/ui/card";
 
 interface Props {
