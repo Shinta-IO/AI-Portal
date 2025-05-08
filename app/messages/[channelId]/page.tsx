@@ -6,15 +6,16 @@ import type { Database } from "@/types";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 
+// PageProps typing for Next 15 compatibility
+interface PageProps<T = {}> {
+  params: T;
+  searchParams?: Record<string, string | string[] | undefined>;
+}
+
 // Channel type with related project and membership info
 type Channel = Database["public"]["Tables"]["channels"]["Row"] & {
   projects: Pick<Database["public"]["Tables"]["projects"]["Row"], "id" | "title"> | null;
   channel_members: { user_id: string }[];
-};
-
-// PageProps for dynamic route
-type ChannelPageProps = {
-  params: { channelId: string };
 };
 
 // Server-side Supabase client with cookie support
@@ -32,7 +33,7 @@ async function getServerClient() {
 }
 
 // ✅ Server component page handler
-export default async function ChannelPage({ params }: ChannelPageProps) {
+export default async function ChannelPage({ params }: PageProps<{ channelId: string }>) {
   const supabase = await getServerClient();
 
   const {
