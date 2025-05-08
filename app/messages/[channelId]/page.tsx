@@ -27,7 +27,8 @@ async function getServerClient() {
 }
 
 // ✅ Server component page handler
-export default async function ChannelPage({ params }: { params: { channelId: string } }) {
+export default async function ChannelPage(props: { params: { channelId: string } }) {
+  const { params } = props;
   const supabase = await getServerClient();
 
   const {
