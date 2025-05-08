@@ -49,7 +49,9 @@ export default function UserTable() {
               <tr key={user.id}>
                 <td className="px-4 py-2 font-medium flex items-center gap-2">
                   <User className="w-4 h-4 text-zinc-400" />
-                  {user.full_name || "Unnamed"}
+                  {(user.first_name || user.last_name) 
+                    ? `${user.first_name || ''} ${user.last_name || ''}`
+                    : "Unnamed"}
                 </td>
                 <td className="px-4 py-2">{user.email || "—"}</td>
                 <td className="px-4 py-2 capitalize">
