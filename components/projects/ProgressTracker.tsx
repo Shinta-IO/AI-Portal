@@ -11,7 +11,9 @@ interface ProgressTrackerProps {
   refreshTrigger?: number;
 }
 
-type Task = Database["public"]["Tables"]["project_tasks"]["Row"];
+type Task = Database["public"]["Tables"]["project_tasks"]["Row"] & { 
+  color?: string;  // Make color optional since it might not be in the database
+};
 
 const ProgressTracker = ({ projectId, isAdmin = false, refreshTrigger }: ProgressTrackerProps) => {
   const { supabase } = useSupabase();
