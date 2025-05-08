@@ -6,12 +6,6 @@ import type { Database } from "@/types";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 
-// PageProps typing for Next 15 compatibility
-interface PageProps<T = {}> {
-  params: T;
-  searchParams?: Record<string, string | string[] | undefined>;
-}
-
 // Channel type with related project and membership info
 type Channel = Database["public"]["Tables"]["channels"]["Row"] & {
   projects: Pick<Database["public"]["Tables"]["projects"]["Row"], "id" | "title"> | null;
@@ -33,7 +27,11 @@ async function getServerClient() {
 }
 
 // ✅ Server component page handler
-export default async function ChannelPage({ params }: PageProps<{ channelId: string }>) {
+export default async function ChannelPage({
+  params,
+}: {
+  params: { channelId: string };
+}) {
   const supabase = await getServerClient();
 
   const {
