@@ -58,7 +58,7 @@ export default function ClientDashboardPage() {
 
   if (!session?.user) return <div className="p-4 text-red-500">Not authenticated.</div>;
 
-  if (!profile) return <div className="p-4 text-muted-foreground">Loading your dashboard...</div>;
+  if (!profile || !userId) return <div className="p-4 text-muted-foreground">Loading your dashboard...</div>;
 
   return (
     <div className="grid gap-4 p-4">
