@@ -34,7 +34,7 @@ export default function AdminProjectsTable() {
   const fetchProfiles = useCallback(async () => {
     const { data } = await supabase
       .from("profiles")
-      .select("id, first_name, last_name")
+      .select("*")
       .order("last_name", { ascending: true });
     if (data) setProfiles(data);
   }, [supabase]);
