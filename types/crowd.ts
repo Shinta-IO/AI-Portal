@@ -10,4 +10,5 @@ export interface CrowdProject {
   created_at?: string;
   channel_id?: string;
   joined?: boolean;
+  image_url?: string;
 } 
