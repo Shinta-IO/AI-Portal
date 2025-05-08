@@ -158,7 +158,9 @@ export default function AdminEstimateManager() {
                 <td className="px-4 py-2 text-right">
                   <button
                     data-dropdown-button
-                    ref={(el) => (buttonRefs.current[est.id] = el)}
+                    ref={(el) => {
+                      buttonRefs.current[est.id] = el;
+                    }}
                     onClick={(e) => {
                       const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
                       if (rect) setButtonPosition({ top: rect.top, left: rect.left });
