@@ -11,9 +11,7 @@ interface ProgressTrackerProps {
   refreshTrigger?: number;
 }
 
-type Task =
-  | Database["public"]["Tables"]["project_tasks"]["Row"]
-  | Database["public"]["Views"]["user_visible_tasks"]["Row"];
+type Task = Database["public"]["Tables"]["project_tasks"]["Row"];
 
 const ProgressTracker = ({ projectId, isAdmin = false, refreshTrigger }: ProgressTrackerProps) => {
   const { supabase } = useSupabase();
