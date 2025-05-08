@@ -17,7 +17,7 @@ if (!STRIPE_SECRET_KEY || !NEXT_PUBLIC_SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KE
 
 // Stripe instance
 const stripe = new Stripe(STRIPE_SECRET_KEY, {
-  apiVersion: "2022-11-15",
+  apiVersion: "2025-04-30.basil",
 });
 
 // Supabase service client
