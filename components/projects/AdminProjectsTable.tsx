@@ -187,7 +187,7 @@ export default function AdminProjectsTable() {
               <label className="block font-medium mb-1">Assign Users:</label>
               <Listbox
                 value={null}
-                onChange={(profile) => {
+                onChange={(profile: Profile | null) => {
                   if (profile && !selectedUsers.find((u) => u.id === profile.id)) {
                     setSelectedUsers([...selectedUsers, profile]);
                   }
